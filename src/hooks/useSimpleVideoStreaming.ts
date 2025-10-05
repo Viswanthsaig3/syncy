@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { simpleVideoStreamingManager, VideoStreamData } from '@/lib/simpleVideoStreaming';
+import { socketManager } from '@/lib/socket';
 
 export const useSimpleVideoStreaming = () => {
   const [isStreaming, setIsStreaming] = useState(false);
