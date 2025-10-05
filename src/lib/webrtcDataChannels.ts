@@ -9,7 +9,7 @@ export class WebRTCDataChannelManager {
     { urls: 'stun:stun2.l.google.com:19302' }
   ];
   private bandwidthStats: Map<string, BandwidthStats> = new Map();
-  private messageHandlers: Map<StreamingMessageType, (message: StreamingMessage) => void> = new Map();
+  private messageHandlers: Map<StreamingMessageType, (message: StreamingMessage, participantId: string) => void> = new Map();
   private connectionStateHandlers: Map<string, (state: RTCPeerConnectionState) => void> = new Map();
 
   constructor() {
