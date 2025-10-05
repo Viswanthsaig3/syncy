@@ -203,11 +203,11 @@ export const useP2PStreaming = () => {
     }
   }, []);
 
-  const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit, participantId: string) => {
+  const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit, participantId: string, roomId?: string) => {
     if (!streamingManagerRef.current) return;
 
     try {
-      await streamingManagerRef.current.handleIceCandidate(candidate, participantId);
+      await streamingManagerRef.current.handleIceCandidate(candidate, participantId, roomId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to handle ICE candidate');
     }
