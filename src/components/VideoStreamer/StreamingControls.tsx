@@ -133,6 +133,12 @@ export const StreamingControls: React.FC<StreamingControlsProps> = ({
               <option value="high">High Quality (Best)</option>
             </select>
           </div>
+
+          <div className="text-center">
+            <p className="text-sm text-slate-600 mb-2">
+              After selecting a video file, participants can join your stream
+            </p>
+          </div>
         </div>
       )}
 

@@ -36,13 +36,17 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     if (!currentRoom || !currentUser) return;
 
     const handleWebRTCOfferEvent = (data: any) => {
+      console.log('Received WebRTC offer:', data);
       if (data.roomId === currentRoom) {
+        console.log('Processing WebRTC offer for participant:', data.participantId);
         handleWebRTCOffer(data.offer, data.participantId, data.roomId, data.userId);
       }
     };
 
     const handleWebRTCAnswerEvent = (data: any) => {
+      console.log('Received WebRTC answer:', data);
       if (data.roomId === currentRoom) {
+        console.log('Processing WebRTC answer for participant:', data.participantId);
         handleWebRTCAnswer(data.answer, data.participantId);
       }
     };
@@ -54,14 +58,26 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     };
 
     const handleJoinStreamRequest = async (data: any) => {
+      console.log('Host: Received join stream request:', data);
+      console.log('Host: Current room:', currentRoom);
+      console.log('Host: Is host:', isHost);
+      console.log('Host: Current user:', currentUser);
+      
       if (data.roomId === currentRoom && isHost && currentUser) {
         // Host should initiate streaming to new participant
-        console.log('New participant wants to join stream:', data);
+        console.log('Host: Initiating streaming to new participant:', data.participantId);
         try {
           await streamToParticipant(data.participantId, currentRoom, currentUser.id);
+          console.log('Host: Successfully initiated streaming to participant');
         } catch (error) {
-          console.error('Failed to stream to new participant:', error);
+          console.error('Host: Failed to stream to new participant:', error);
         }
+      } else {
+        console.log('Host: Not handling join request - conditions not met:', {
+          roomMatch: data.roomId === currentRoom,
+          isHost: isHost,
+          hasUser: !!currentUser
+        });
       }
     };
 
@@ -109,12 +125,15 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     if (!currentRoom || !currentUser) return;
 
     try {
+      console.log('Host: Starting streaming with video file:', videoFile.name);
       await startHosting(videoFile, currentRoom, currentUser.id);
       
       // Create blob URL for local playback
       const url = URL.createObjectURL(videoFile);
       setVideoUrl(url);
       setVideoBlob(new Blob([videoFile]));
+      
+      console.log('Host: Streaming setup complete, ready for participants');
       
     } catch (error) {
       console.error('Failed to start streaming:', error);
@@ -126,9 +145,11 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     if (!currentRoom || !currentUser) return;
 
     try {
+      console.log('Participant: Attempting to join stream in room:', currentRoom);
       await joinStream(currentRoom, currentUser.id);
+      console.log('Participant: Successfully initiated join stream request');
     } catch (error) {
-      console.error('Failed to join stream:', error);
+      console.error('Participant: Failed to join stream:', error);
     }
   };
 
@@ -220,6 +241,19 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
         onStopStreaming={handleStopStreaming}
         onJoinStream={handleJoinStream}
       />
+
+      {/* Debug Panel */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-slate-700 mb-2">Debug Info</h4>
+        <div className="text-xs text-slate-600 space-y-1">
+          <div>Room: {currentRoom || 'None'}</div>
+          <div>User: {currentUser?.name || 'None'} ({currentUser?.id || 'None'})</div>
+          <div>Role: {isHost ? 'Host' : 'Participant'}</div>
+          <div>Streaming: {isStreaming ? 'Yes' : 'No'}</div>
+          <div>Video URL: {videoUrl ? 'Set' : 'None'}</div>
+          <div>Video Metadata: {videoMetadata ? 'Available' : 'None'}</div>
+        </div>
+      </div>
 
       {/* Bandwidth Monitor */}
       {isStreaming && (
