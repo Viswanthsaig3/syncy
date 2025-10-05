@@ -1,3 +1,16 @@
+// WebRTC types for P2P streaming
+export interface RTCSessionDescriptionInit {
+  type: 'offer' | 'answer' | 'pranswer' | 'rollback';
+  sdp?: string;
+}
+
+export interface RTCIceCandidateInit {
+  candidate?: string;
+  sdpMLineIndex?: number | null;
+  sdpMid?: string | null;
+  usernameFragment?: string | null;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -41,6 +54,31 @@ export interface SocketEvents {
     speed?: number;
   }) => void;
   'chat-message': (data: { roomId: string; message: string }) => void;
+
+  // P2P Streaming Events
+  'webrtc-offer': (data: {
+    roomId: string;
+    participantId: string;
+    offer: RTCSessionDescriptionInit;
+  }) => void;
+  'webrtc-answer': (data: {
+    roomId: string;
+    participantId: string;
+    answer: RTCSessionDescriptionInit;
+  }) => void;
+  'ice-candidate': (data: {
+    roomId: string;
+    participantId: string;
+    candidate: RTCIceCandidateInit;
+  }) => void;
+  'join-stream-request': (data: { roomId: string }) => void;
+  'streaming-started': (data: {
+    roomId: string;
+    metadata: any;
+    totalChunks: number;
+    quality: string;
+  }) => void;
+  'streaming-stopped': (data: { roomId: string }) => void;
 
   // Server to Client
   'room-joined': (data: {
