@@ -7,7 +7,7 @@ class SocketManager {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
 
-  connect(serverUrl: string = process.env.NEXT_PUBLIC_WS_SERVER_URL || 'https://syncy-backend-xxxxx.onrender.com'): Promise<void> {
+  connect(serverUrl: string = process.env.NEXT_PUBLIC_WS_SERVER_URL || 'https://syncy-h7ro.onrender.com'): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         // Don't create a new connection if one already exists
