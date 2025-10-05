@@ -25,7 +25,6 @@ class SocketManager {
           reconnectionDelay: 2000,
           reconnectionDelayMax: 10000,
           reconnectionAttempts: 10,
-          maxReconnectionAttempts: 10,
           randomizationFactor: 0.5,
           autoConnect: true,
           upgrade: true,

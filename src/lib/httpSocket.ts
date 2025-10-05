@@ -248,7 +248,7 @@ class HttpSocketManager {
   }
 
   // Compatibility methods
-  get isConnected(): boolean {
+  get connected(): boolean {
     return this.isConnected;
   }
 
