@@ -79,6 +79,15 @@ export interface SocketEvents {
     quality: string;
   }) => void;
   'streaming-stopped': (data: { roomId: string }) => void;
+  'streaming-started': (data: {
+    roomId: string;
+    hostId: string;
+    hostName: string;
+    metadata: any;
+    totalChunks: number;
+    quality: string;
+    timestamp: number;
+  }) => void;
 
   // Server to Client
   'room-joined': (data: {

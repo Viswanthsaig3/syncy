@@ -65,19 +65,33 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
       }
     };
 
+    const handleStreamingStarted = async (data: any) => {
+      if (data.roomId === currentRoom && !isHost && currentUser) {
+        // Participant should automatically join the stream when host starts
+        console.log('Host started streaming, joining automatically:', data);
+        try {
+          await joinStream(currentRoom, currentUser.id);
+        } catch (error) {
+          console.error('Failed to join stream automatically:', error);
+        }
+      }
+    };
+
     // Register event listeners
     socketManager.on('webrtc-offer', handleWebRTCOfferEvent);
     socketManager.on('webrtc-answer', handleWebRTCAnswerEvent);
     socketManager.on('ice-candidate', handleIceCandidateEvent);
     socketManager.on('join-stream-request', handleJoinStreamRequest);
+    socketManager.on('streaming-started', handleStreamingStarted);
 
     return () => {
       socketManager.off('webrtc-offer', handleWebRTCOfferEvent);
       socketManager.off('webrtc-answer', handleWebRTCAnswerEvent);
       socketManager.off('ice-candidate', handleIceCandidateEvent);
       socketManager.off('join-stream-request', handleJoinStreamRequest);
+      socketManager.off('streaming-started', handleStreamingStarted);
     };
-  }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate, streamToParticipant]);
+  }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate, streamToParticipant, joinStream]);
 
   // Handle video file selection for hosting
   const handleStartStreaming = async (videoFile: File) => {
