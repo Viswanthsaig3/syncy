@@ -4,6 +4,8 @@ import { useP2PStreaming } from '@/hooks/useP2PStreaming';
 
 interface StreamingControlsProps {
   isHost: boolean;
+  hostStreamingReady?: boolean;
+  isJoiningStream?: boolean;
   onStartStreaming?: (videoFile: File) => void;
   onStopStreaming?: () => void;
   onJoinStream?: () => void;
@@ -12,6 +14,8 @@ interface StreamingControlsProps {
 
 export const StreamingControls: React.FC<StreamingControlsProps> = ({
   isHost,
+  hostStreamingReady = false,
+  isJoiningStream = false,
   onStartStreaming,
   onStopStreaming,
   onJoinStream,
@@ -145,13 +149,48 @@ export const StreamingControls: React.FC<StreamingControlsProps> = ({
       {/* Participant Controls */}
       {!isHost && !isStreaming && (
         <div className="text-center">
-          <button
-            onClick={onJoinStream}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors mx-auto"
-          >
-            <Download className="w-4 h-4" />
-            Join Stream
-          </button>
+          {hostStreamingReady ? (
+            <div className="space-y-3">
+              <p className="text-sm text-green-600 font-medium">
+                ✅ Host is ready to stream!
+              </p>
+              <button
+                onClick={onJoinStream}
+                disabled={isJoiningStream}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors mx-auto ${
+                  isJoiningStream 
+                    ? 'bg-blue-400 text-white cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {isJoiningStream ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Joining...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Join Stream
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">
+                ⏳ Waiting for host to start streaming...
+              </p>
+              <button
+                onClick={onJoinStream}
+                disabled
+                className="flex items-center gap-2 px-4 py-2 bg-slate-300 text-slate-500 rounded-md cursor-not-allowed mx-auto"
+              >
+                <Download className="w-4 h-4" />
+                Join Stream
+              </button>
+            </div>
+          )}
         </div>
       )}
 

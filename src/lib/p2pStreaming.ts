@@ -120,22 +120,39 @@ export class P2PStreamingManager {
     }
 
     try {
+      console.log(`Host: Creating WebRTC connection for participant ${participantId}`);
+      
       // Create peer connection
       const peerConnection = await this.webrtcManager.createPeerConnection(participantId);
       
-      // Set up connection state monitoring
+      // Set up connection state monitoring with timeout
+      let connectionTimeout: NodeJS.Timeout;
+      
       this.webrtcManager.onConnectionStateChange(participantId, (state) => {
-        console.log(`Connection state changed for ${participantId}:`, state);
+        console.log(`Host: Connection state changed for ${participantId}:`, state);
+        
         if (state === 'connected') {
+          clearTimeout(connectionTimeout);
+          console.log(`Host: WebRTC connected to ${participantId}, starting stream`);
           this.startStreamingToParticipant(participantId, roomId, userId);
         } else if (state === 'disconnected' || state === 'failed') {
+          clearTimeout(connectionTimeout);
+          console.log(`Host: WebRTC connection failed for ${participantId}`);
           this.stopStreamingToParticipant(participantId);
         }
       });
 
+      // Set connection timeout (30 seconds)
+      connectionTimeout = setTimeout(() => {
+        console.error(`Host: WebRTC connection timeout for ${participantId}`);
+        this.stopStreamingToParticipant(participantId);
+      }, 30000);
+
       // Create offer
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
+      
+      console.log(`Host: Created WebRTC offer for ${participantId}`);
       
       // Emit offer to participant via Socket.IO
       this.emit('webrtc-offer', {
@@ -153,7 +170,7 @@ export class P2PStreamingManager {
       });
 
     } catch (error) {
-      console.error(`Failed to stream to participant ${participantId}:`, error);
+      console.error(`Host: Failed to stream to participant ${participantId}:`, error);
       throw error;
     }
   }
@@ -198,6 +215,12 @@ export class P2PStreamingManager {
 
   // Participant Methods
   async joinStream(roomId: string, userId: string): Promise<void> {
+    // Prevent multiple simultaneous join attempts
+    if (this.streamingState.isStreaming && !this.streamingState.isHost) {
+      console.log('Already attempting to join stream, skipping duplicate request');
+      return;
+    }
+
     try {
       console.log('Joining P2P stream as participant');
       

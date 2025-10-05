@@ -13,6 +13,8 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [hostStreamingReady, setHostStreamingReady] = useState<boolean>(false);
+  const [isJoiningStream, setIsJoiningStream] = useState<boolean>(false);
   
   const { currentRoom, currentUser, isHost } = useAppStore();
   
@@ -88,15 +90,11 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
       console.log('Current user:', currentUser);
       
       if (data.roomId === currentRoom && !isHost && currentUser) {
-        // Participant should automatically join the stream when host starts
-        console.log('Host started streaming, joining automatically:', data);
-        try {
-          await joinStream(currentRoom, currentUser.id);
-        } catch (error) {
-          console.error('Failed to join stream automatically:', error);
-        }
+        // Participant should wait for manual join - don't auto-join
+        console.log('Host started streaming, ready for participants to join manually');
+        setHostStreamingReady(true);
       } else {
-        console.log('Not joining stream - conditions not met:', {
+        console.log('Not a participant or conditions not met:', {
           roomMatch: data.roomId === currentRoom,
           notHost: !isHost,
           hasUser: !!currentUser
@@ -142,14 +140,20 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
 
   // Handle joining stream as participant
   const handleJoinStream = async () => {
-    if (!currentRoom || !currentUser) return;
+    if (!currentRoom || !currentUser || isJoiningStream) return;
 
+    setIsJoiningStream(true);
     try {
       console.log('Participant: Attempting to join stream in room:', currentRoom);
       await joinStream(currentRoom, currentUser.id);
       console.log('Participant: Successfully initiated join stream request');
     } catch (error) {
       console.error('Participant: Failed to join stream:', error);
+    } finally {
+      // Reset joining state after a delay to prevent rapid retries
+      setTimeout(() => {
+        setIsJoiningStream(false);
+      }, 2000);
     }
   };
 
@@ -237,6 +241,8 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
       {/* Streaming Controls */}
       <StreamingControls
         isHost={isHost}
+        hostStreamingReady={hostStreamingReady}
+        isJoiningStream={isJoiningStream}
         onStartStreaming={handleStartStreaming}
         onStopStreaming={handleStopStreaming}
         onJoinStream={handleJoinStream}
