@@ -223,14 +223,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
   };
 
   // Handle fullscreen
-  const handleFullscreen = () => {
+  const handleFullscreen = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      video.requestFullscreen();
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await video.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
     }
   };
 
@@ -248,13 +252,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
   if (!videoUrl) {
     return (
       <div className={cn(
-        'flex items-center justify-center bg-gray-900 rounded-lg',
+        'flex items-center justify-center bg-slate-900 rounded-lg border border-slate-200',
         'aspect-video w-full max-w-4xl mx-auto',
         className
       )}>
-        <div className="text-center text-gray-400">
-          <div className="text-6xl mb-4">🎬</div>
-          <p className="text-lg">Select a video file to start watching</p>
+        <div className="text-center text-slate-400">
+          <div className="w-16 h-16 bg-slate-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <Play className="w-8 h-8 text-slate-400" />
+          </div>
+          <p className="text-lg font-medium">Select a video file to begin</p>
         </div>
       </div>
     );
@@ -263,7 +269,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        'relative bg-black rounded-lg overflow-hidden group',
+        'relative bg-black rounded-lg overflow-hidden group border border-slate-200',
         'aspect-video w-full max-w-4xl mx-auto',
         className
       )}
@@ -304,7 +310,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
           <div className="absolute top-4 right-4 flex gap-2">
             <button
               onClick={handleFullscreen}
-              className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              className="p-2 bg-black/50 rounded-lg text-white hover:bg-black/70 transition-colors"
             >
               <Maximize className="w-5 h-5" />
             </button>
@@ -314,7 +320,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               onClick={handlePlayPause}
-              className="p-4 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              className="p-4 bg-black/50 rounded-lg text-white hover:bg-black/70 transition-colors"
               disabled={!isHost}
             >
               {localVideoState.isPlaying ? (
@@ -329,11 +335,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
           <div className="absolute bottom-0 left-0 right-0 p-4">
             {/* Progress bar */}
             <div
-              className="w-full h-1 bg-gray-600 rounded-full cursor-pointer mb-4"
+              className="w-full h-1 bg-slate-600 rounded-full cursor-pointer mb-4"
               onClick={handleProgressClick}
             >
               <div
-                className="h-full bg-red-500 rounded-full transition-all duration-100"
+                className="h-full bg-white rounded-full transition-all duration-100"
                 style={{ 
                   width: `${localVideoState.duration > 0 ? (localVideoState.currentTime / localVideoState.duration) * 100 : 0}%` 
                 }}
@@ -384,7 +390,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
                     step="0.1"
                     value={localVideoState.isMuted ? 0 : localVideoState.volume}
                     onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                    className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                    className="w-20 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer"
                     disabled={!isHost}
                   />
                 </div>
@@ -411,7 +417,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
       {/* Host indicator */}
       {!isHost && (
-        <div className="absolute top-4 left-4 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-medium">
+        <div className="absolute top-4 left-4 bg-amber-100 text-amber-800 px-3 py-1 rounded-lg text-sm font-medium border border-amber-200">
           Viewing Mode
         </div>
       )}
