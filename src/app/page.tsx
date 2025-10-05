@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { VideoStreamer } from '@/components/VideoStreamer/VideoStreamer';
+import { SimpleVideoStreamer } from '@/components/VideoStreamer/SimpleVideoStreamer';
 import { RoomSelector } from '@/components/RoomSelector';
 import { Chat } from '@/components/Chat';
 import { UserList } from '@/components/UserList';
@@ -197,10 +197,10 @@ export default function HomePage() {
                   <Play className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-slate-900 mb-4">
-                  Peer-to-Peer Video Streaming
+                  Simple Video Streaming
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-                  Stream video files directly from host to participants using WebRTC technology. No uploads, no database - just pure P2P streaming.
+                  Stream video files from host to participants using reliable HTTP-based streaming. Fast, simple, and works every time.
                 </p>
               </div>
 
@@ -286,7 +286,7 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-4 gap-8">
             {/* Video Streamer - Main Content */}
             <div className="lg:col-span-3">
-              <VideoStreamer className="mb-6" />
+              <SimpleVideoStreamer className="mb-6" />
             </div>
 
             {/* Professional Sidebar */}

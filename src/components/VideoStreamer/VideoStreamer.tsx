@@ -127,16 +127,18 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
 
   // Handle starting streaming
   const handleStartStreaming = async (videoFile: File) => {
-    if (!currentRoom || !currentUser) return;
+    if (!currentRoom || !currentUser || isStreaming) return;
 
     try {
       console.log('Host: Starting streaming with video file:', videoFile.name);
-      await startHosting(videoFile, currentRoom, currentUser.id);
       
       // Create blob URL for local playback
       const url = URL.createObjectURL(videoFile);
       setVideoUrl(url);
       setVideoBlob(new Blob([videoFile]));
+      
+      // Start the P2P streaming
+      await startHosting(videoFile, currentRoom, currentUser.id);
       
       console.log('Host: Streaming setup complete, ready for participants');
       

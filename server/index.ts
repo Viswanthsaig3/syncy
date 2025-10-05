@@ -459,6 +459,62 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Simple video streaming events
+  socket.on('video-stream-started', (data: {
+    roomId: string;
+    hostId: string;
+    hostName: string;
+    videoUrl: string;
+    videoName: string;
+    videoSize: number;
+    timestamp: number;
+  }) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Broadcast video stream to all participants
+      socket.to(roomId).emit('video-stream-started', data);
+      
+      console.log(`Video stream started by ${data.hostName} in room ${roomId}: ${data.videoName}`);
+    } catch (error) {
+      console.error('Error handling video stream started:', error);
+      socket.emit('error', { message: 'Failed to process video stream started' });
+    }
+  });
+
+  socket.on('request-video-stream', (data: {
+    roomId: string;
+    userId: string;
+  }) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Forward request to host
+      socket.to(room.host).emit('request-video-stream', {
+        ...data,
+        participantId: socket.id,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Video stream request from participant in room ${roomId}`);
+    } catch (error) {
+      console.error('Error handling video stream request:', error);
+      socket.emit('error', { message: 'Failed to process video stream request' });
+    }
+  });
+
   // Chat messages
   socket.on('chat-message', (data: { roomId: string; message: string }) => {
     try {
