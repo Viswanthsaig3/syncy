@@ -133,19 +133,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             console.log('Processing play event:', data);
             updateVideoPlayerState({
               isPlaying: true,
-              currentTime: data.time || 0,
+              // Only update currentTime if it's provided and valid
+              ...(data.time !== undefined && data.time >= 0 && { currentTime: data.time }),
             });
             break;
           case 'pause':
             console.log('Processing pause event:', data);
             updateVideoPlayerState({
               isPlaying: false,
-              currentTime: data.time || 0,
+              // Only update currentTime if it's provided and valid
+              ...(data.time !== undefined && data.time >= 0 && { currentTime: data.time }),
             });
             break;
           case 'seek':
             console.log('Processing seek event:', data);
-            if (data.time !== undefined) {
+            if (data.time !== undefined && data.time >= 0) {
               updateVideoPlayerState({ currentTime: data.time });
             }
             break;

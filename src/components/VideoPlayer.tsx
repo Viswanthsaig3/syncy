@@ -41,7 +41,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     const video = videoRef.current;
     if (!video) return;
 
-    console.log('Syncing video state:', { currentTime, volume, playbackRate, isMuted, isPlaying });
+    console.log('Syncing video state:', { currentTime, volume, playbackRate, isMuted, isPlaying, duration });
     
     // Only update currentTime if it's significantly different to avoid conflicts
     // Use a smaller threshold for better sync accuracy
@@ -50,21 +50,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       video.currentTime = currentTime;
     }
     
-    video.volume = isMuted ? 0 : volume;
-    video.playbackRate = playbackRate;
-    
-    // Control play/pause based on state
-    if (isPlaying && video.paused) {
-      console.log('Starting video playback');
-      video.play().catch(error => {
-        console.error('Failed to play video:', error);
-        updateVideoPlayerState({ isPlaying: false, hasError: true });
-      });
-    } else if (!isPlaying && !video.paused) {
-      console.log('Pausing video');
-      video.pause();
+    // Only update volume and playback rate if they're different
+    if (Math.abs(video.volume - (isMuted ? 0 : volume)) > 0.01) {
+      video.volume = isMuted ? 0 : volume;
     }
-  }, [currentTime, volume, playbackRate, isMuted, isPlaying, updateVideoPlayerState]);
+    
+    if (Math.abs(video.playbackRate - playbackRate) > 0.01) {
+      video.playbackRate = playbackRate;
+    }
+    
+    // Control play/pause based on state - but only if the video is ready
+    if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+      if (isPlaying && video.paused) {
+        console.log('Starting video playback');
+        video.play().catch(error => {
+          console.error('Failed to play video:', error);
+          updateVideoPlayerState({ isPlaying: false, hasError: true });
+        });
+      } else if (!isPlaying && !video.paused) {
+        console.log('Pausing video');
+        video.pause();
+      }
+    }
+  }, [currentTime, volume, playbackRate, isMuted, isPlaying, updateVideoPlayerState, duration]);
 
   // Handle video events
   const handlePlay = useCallback(() => {
@@ -137,13 +145,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       // Ensure the seek time is within valid bounds
       const clampedTime = Math.max(0, Math.min(newTime, duration || 0));
       
-      updateVideoPlayerState({ currentTime: clampedTime });
-      socketManager.sendVideoEvent({
-        roomId: currentRoom,
-        type: 'seek',
-        time: clampedTime,
-      });
-    }, 50), // Reduced debounce time for more responsive seeking
+      // Only send seek event if the time is significantly different
+      const currentStoreTime = useAppStore.getState().videoPlayerState.currentTime;
+      if (Math.abs(clampedTime - currentStoreTime) > 0.5) {
+        updateVideoPlayerState({ currentTime: clampedTime });
+        socketManager.sendVideoEvent({
+          roomId: currentRoom,
+          type: 'seek',
+          time: clampedTime,
+        });
+      }
+    }, 100), // Increased debounce time to prevent conflicts
     [isHost, currentRoom, updateVideoPlayerState, duration]
   );
 
@@ -178,16 +190,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     if (!video) return;
 
     const handleLoadedMetadata = () => {
+      console.log('Video metadata loaded, duration:', video.duration);
       updateVideoPlayerState({
-        duration: video.duration,
+        duration: video.duration || 0,
         isLoading: false,
         hasError: false,
       });
     };
 
     const handleTimeUpdate = () => {
-      if (!isDragging) {
-        updateVideoPlayerState({ currentTime: video.currentTime });
+      if (!isDragging && video.readyState >= 2) {
+        // Only update if the time difference is significant to avoid constant updates
+        const currentStoreTime = useAppStore.getState().videoPlayerState.currentTime;
+        if (Math.abs(video.currentTime - currentStoreTime) > 0.1) {
+          updateVideoPlayerState({ currentTime: video.currentTime });
+        }
       }
     };
 
@@ -323,26 +340,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
         className="w-full h-full object-contain"
         onPlay={(e) => {
           console.log('Video onPlay event:', e.currentTarget.currentTime);
-          handlePlay();
+          // Only handle play if we're the host and not already playing
+          if (isHost && !isPlaying) {
+            handlePlay();
+          }
         }}
         onPause={(e) => {
           console.log('Video onPause event:', e.currentTarget.currentTime);
-          handlePause();
+          // Only handle pause if we're the host and currently playing
+          if (isHost && isPlaying) {
+            handlePause();
+          }
         }}
         onSeeked={(e) => {
           const video = e.currentTarget;
           console.log('Video onSeeked event:', video.currentTime);
-          handleSeek(video.currentTime);
+          // Only handle seek if we're the host
+          if (isHost) {
+            handleSeek(video.currentTime);
+          }
         }}
         onVolumeChange={(e) => {
           const video = e.currentTarget;
           console.log('Video onVolumeChange event:', video.volume);
-          handleVolumeChange(video.volume);
+          // Only handle volume change if we're the host
+          if (isHost) {
+            handleVolumeChange(video.volume);
+          }
         }}
         onRateChange={(e) => {
           const video = e.currentTarget;
           console.log('Video onRateChange event:', video.playbackRate);
-          handleSpeedChange(video.playbackRate);
+          // Only handle rate change if we're the host
+          if (isHost) {
+            handleSpeedChange(video.playbackRate);
+          }
         }}
         onLoadStart={() => {
           console.log('Video load start');
@@ -414,7 +446,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
             >
               <div
                 className="h-full bg-red-500 rounded-full transition-all duration-100"
-                style={{ width: `${(currentTime / duration) * 100}%` }}
+                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
               />
             </div>
 
@@ -436,7 +468,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
                 {/* Time display */}
                 <span className="text-sm font-mono">
-                  {formatTime(currentTime)} / {formatTime(duration)}
+                  {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
                 </span>
               </div>
 
