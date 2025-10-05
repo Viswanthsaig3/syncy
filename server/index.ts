@@ -8,11 +8,21 @@ import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const server = createServer(app);
+
+// Get environment variables with fallbacks
+const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || 'https://syncy-five.vercel.app';
+const NODE_ENV = process.env.NODE_ENV || 'production';
+
+console.log('Environment Configuration:', {
+  PORT,
+  CLIENT_URL,
+  NODE_ENV
+});
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.CLIENT_URL 
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -21,13 +31,11 @@ const io = new Server(server, {
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable for development
+  contentSecurityPolicy: false,
 }));
 app.use(compression());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CLIENT_URL 
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: CLIENT_URL,
   credentials: true,
 }));
 app.use(express.json());
@@ -350,6 +358,8 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     rooms: rooms.size,
     connections: io.engine.clientsCount,
+    environment: NODE_ENV,
+    clientUrl: CLIENT_URL,
   });
 });
 
@@ -371,10 +381,22 @@ app.get('/api/room/:roomId', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Syncy WebSocket Server',
+    status: 'running',
+    version: '1.0.0',
+    clientUrl: CLIENT_URL,
+    health: '/health',
+    api: '/api/room/:roomId'
+  });
+});
 
 server.listen(PORT, () => {
   console.log(`🚀 Syncy server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready for connections`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌍 Environment: ${NODE_ENV}`);
+  console.log(`🔗 Client URL: ${CLIENT_URL}`);
+  console.log(`💚 Health check: http://localhost:${PORT}/health`);
 });

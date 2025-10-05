@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: syncy-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://syncy-five.vercel.app
+      - key: PORT
+        value: 3001

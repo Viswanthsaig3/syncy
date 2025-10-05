@@ -44,7 +44,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     console.log('Syncing video state:', { currentTime, volume, playbackRate, isMuted, isPlaying });
     
     // Only update currentTime if it's significantly different to avoid conflicts
-    if (Math.abs(video.currentTime - currentTime) > 0.1) {
+    // Use a smaller threshold for better sync accuracy
+    if (Math.abs(video.currentTime - currentTime) > 0.5) {
       console.log('Updating video currentTime from', video.currentTime, 'to', currentTime);
       video.currentTime = currentTime;
     }
@@ -133,14 +134,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       const video = videoRef.current;
       if (!video) return;
 
-      updateVideoPlayerState({ currentTime: newTime });
+      // Ensure the seek time is within valid bounds
+      const clampedTime = Math.max(0, Math.min(newTime, duration || 0));
+      
+      updateVideoPlayerState({ currentTime: clampedTime });
       socketManager.sendVideoEvent({
         roomId: currentRoom,
         type: 'seek',
-        time: newTime,
+        time: clampedTime,
       });
-    }, 100),
-    [isHost, currentRoom, updateVideoPlayerState]
+    }, 50), // Reduced debounce time for more responsive seeking
+    [isHost, currentRoom, updateVideoPlayerState, duration]
   );
 
   const handleVolumeChange = useCallback(
@@ -187,6 +191,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       }
     };
 
+    const handleEnded = () => {
+      console.log('Video ended');
+      updateVideoPlayerState({ 
+        isPlaying: false, 
+        currentTime: 0 
+      });
+      
+      // If host, broadcast the end event
+      if (isHost && currentRoom) {
+        socketManager.sendVideoEvent({
+          roomId: currentRoom,
+          type: 'seek',
+          time: 0,
+        });
+      }
+    };
+
     const handlePlayEvent = () => {
       console.log('Video play event triggered');
       updateVideoPlayerState({ isPlaying: true });
@@ -211,6 +232,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     video.addEventListener('pause', handlePauseEvent);
     video.addEventListener('error', handleError);
     video.addEventListener('loadstart', handleLoadStart);
+    video.addEventListener('ended', handleEnded);
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -219,18 +241,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       video.removeEventListener('pause', handlePauseEvent);
       video.removeEventListener('error', handleError);
       video.removeEventListener('loadstart', handleLoadStart);
+      video.removeEventListener('ended', handleEnded);
     };
   }, [updateVideoPlayerState, isDragging]);
 
   // Handle progress bar interaction
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost || !videoRef.current) return;
+    if (!isHost || !videoRef.current || !duration) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
     
-    handleSeek(newTime);
+    // Ensure we don't seek beyond the video duration
+    const clampedTime = Math.max(0, Math.min(newTime, duration));
+    handleSeek(clampedTime);
   };
 
   const handleProgressMouseDown = () => {

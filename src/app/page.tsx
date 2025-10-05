@@ -202,8 +202,15 @@ export default function HomePage() {
                     onClick={() => {
                       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
                       const userName = prompt('Enter your name:') || 'Anonymous';
-                      if (userName) {
-                        socketManager.joinRoom(roomId, userName);
+                      if (userName && userName.trim()) {
+                        // Set the user name in the store before joining
+                        useAppStore.getState().setCurrentUser({
+                          id: '',
+                          name: userName.trim(),
+                          isHost: false,
+                          joinedAt: new Date(),
+                        });
+                        socketManager.joinRoom(roomId, userName.trim());
                       }
                     }}
                     className="w-full p-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-3xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl"
@@ -228,8 +235,15 @@ export default function HomePage() {
                     onClick={() => {
                       const roomId = prompt('Enter room code:')?.toUpperCase();
                       const userName = prompt('Enter your name:') || 'Anonymous';
-                      if (roomId && userName) {
-                        socketManager.joinRoom(roomId, userName);
+                      if (roomId && userName && userName.trim()) {
+                        // Set the user name in the store before joining
+                        useAppStore.getState().setCurrentUser({
+                          id: '',
+                          name: userName.trim(),
+                          isHost: false,
+                          joinedAt: new Date(),
+                        });
+                        socketManager.joinRoom(roomId, userName.trim());
                       }
                     }}
                     className="w-full p-8 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-3xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl"

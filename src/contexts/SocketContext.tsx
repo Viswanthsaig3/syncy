@@ -83,9 +83,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
       const handleRoomJoined = (data: any) => {
         setCurrentRoom(data.roomId);
+        
+        // Get the current user's name from the store or use a default
+        const currentUserName = useAppStore.getState().currentUser?.name || 'User';
+        
         setCurrentUser({
           id: data.userId,
-          name: currentUser?.name || 'Unknown',
+          name: currentUserName,
           isHost: data.isHost,
           joinedAt: new Date(),
         });

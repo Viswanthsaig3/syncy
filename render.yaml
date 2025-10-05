@@ -1,0 +1,32 @@
+services:
+  # WebSocket Server
+  - type: web
+    name: syncy-server
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:server
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: syncy-client
+          property: host
+
+  # Frontend (Next.js)
+  - type: web
+    name: syncy-client
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:client
+    envVars:
+      - key: NEXT_PUBLIC_WS_SERVER_URL
+        fromService:
+          type: web
+          name: syncy-server
+          property: host
+      - key: NODE_ENV
+        value: production

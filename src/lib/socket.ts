@@ -19,11 +19,17 @@ class SocketManager {
 
         this.socket = io(serverUrl, {
           transports: ['websocket', 'polling'],
-          timeout: 20000,
-          forceNew: false, // Don't force new connection
+          timeout: 30000,
+          forceNew: false,
           reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionAttempts: 5,
+          reconnectionDelay: 2000,
+          reconnectionDelayMax: 10000,
+          reconnectionAttempts: 10,
+          maxReconnectionAttempts: 10,
+          randomizationFactor: 0.5,
+          autoConnect: true,
+          upgrade: true,
+          rememberUpgrade: true,
         });
 
         this.socket.on('connect', () => {
@@ -39,9 +45,9 @@ class SocketManager {
 
         this.socket.on('disconnect', (reason) => {
           console.log('Disconnected from server:', reason);
-          if (reason === 'io server disconnect') {
-            // Server disconnected, try to reconnect
-            this.handleReconnect();
+          // Only handle reconnection for specific reasons
+          if (reason === 'io server disconnect' || reason === 'transport close') {
+            console.log('Server disconnected, will attempt reconnection...');
           }
         });
 
@@ -68,15 +74,17 @@ class SocketManager {
   private handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+      const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 10000);
       
       console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       
       setTimeout(() => {
-        if (this.socket) {
+        if (this.socket && !this.socket.connected) {
           this.socket.connect();
         }
       }, delay);
+    } else {
+      console.log('Max reconnection attempts reached');
     }
   }
 

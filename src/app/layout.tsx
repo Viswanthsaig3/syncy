@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   keywords: ['video sync', 'local video', 'watch together', 'synchronized playback', 'WebSocket'],
   authors: [{ name: 'Syncy Team' }],
   robots: 'index, follow',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: 'Syncy - Local Video Sync',
     description: 'Watch local videos in perfect sync with friends. No uploads, just synchronized playback.',
