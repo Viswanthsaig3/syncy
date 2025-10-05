@@ -90,7 +90,7 @@ export class P2PStreamingManager {
       });
 
       // Notify server about streaming started
-      socketManager.emit('streaming-started', {
+      socketManager.emitAny('streaming-started', {
         roomId,
         metadata: this.videoChunker.getMetadata(),
         totalChunks: chunks.length,
@@ -143,7 +143,7 @@ export class P2PStreamingManager {
       });
 
       // Send offer via Socket.IO
-      socketManager.emit('webrtc-offer', {
+      socketManager.emitAny('webrtc-offer', {
         roomId,
         participantId,
         offer
@@ -211,7 +211,7 @@ export class P2PStreamingManager {
       this.emit('join-stream-request', { roomId, userId });
 
       // Send join request via Socket.IO
-      socketManager.emit('join-stream-request', { roomId });
+      socketManager.emitAny('join-stream-request', { roomId });
       
     } catch (error) {
       console.error('Failed to join stream:', error);
@@ -314,7 +314,7 @@ export class P2PStreamingManager {
       });
 
       // Send answer via Socket.IO
-      socketManager.emit('webrtc-answer', {
+      socketManager.emitAny('webrtc-answer', {
         roomId,
         participantId,
         answer

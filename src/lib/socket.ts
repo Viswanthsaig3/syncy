@@ -121,6 +121,20 @@ class SocketManager {
     this.socket.emit('chat-message', { roomId, message });
   }
 
+  emit<K extends keyof SocketEvents>(event: K, data: Parameters<SocketEvents[K]>[0]) {
+    if (!this.socket) {
+      throw new Error('Socket not connected');
+    }
+    this.socket.emit(event, data);
+  }
+
+  emitAny(event: string, data: any) {
+    if (!this.socket) {
+      throw new Error('Socket not connected');
+    }
+    (this.socket as any).emit(event, data);
+  }
+
   on<K extends keyof SocketEvents>(event: K, callback: SocketEvents[K]) {
     if (!this.socket) {
       throw new Error('Socket not connected');
