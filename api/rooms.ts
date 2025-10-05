@@ -148,7 +148,7 @@ async function handleLeaveRoom(req: VercelRequest, res: VercelResponse) {
 
   // Transfer host if needed
   if (user.isHost && room.users.size > 0) {
-    const newHost = Array.from(room.users.values())[0];
+    const newHost = Array.from(room.users.values())[0] as any;
     newHost.isHost = true;
     room.host = newHost.id;
   }
