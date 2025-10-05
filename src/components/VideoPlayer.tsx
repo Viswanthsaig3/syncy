@@ -90,7 +90,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
   const handleSeek = useCallback(
     debounce((newTime: number) => {
-      if (!isHost || !currentRoom) return;
+      if (!currentRoom) return;
       
       const video = videoRef.current;
       if (!video) return;
@@ -100,12 +100,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       // Update store
       updateVideoPlayerState({ currentTime: clampedTime });
       
-      // Send to other users
-      socketManager.sendVideoEvent({
-        roomId: currentRoom,
-        type: 'seek',
-        time: clampedTime,
-      });
+      // Only hosts can broadcast seek events
+      if (isHost) {
+        socketManager.sendVideoEvent({
+          roomId: currentRoom,
+          type: 'seek',
+          time: clampedTime,
+        });
+      }
     }, 100),
     [isHost, currentRoom, localVideoState.duration, updateVideoPlayerState]
   );
@@ -213,7 +215,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
   // Handle progress bar interaction
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost || !videoRef.current || !localVideoState.duration) return;
+    if (!videoRef.current || !localVideoState.duration) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -228,10 +230,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     if (!video) return;
 
     try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
+      if (document.fullscreenElement || 
+          (document as any).webkitFullscreenElement || 
+          (document as any).mozFullScreenElement || 
+          (document as any).msFullscreenElement) {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
       } else {
-        await video.requestFullscreen();
+        // Enter fullscreen
+        if (video.requestFullscreen) {
+          await video.requestFullscreen();
+        } else if ((video as any).webkitRequestFullscreen) {
+          await (video as any).webkitRequestFullscreen();
+        } else if ((video as any).mozRequestFullScreen) {
+          await (video as any).mozRequestFullScreen();
+        } else if ((video as any).msRequestFullscreen) {
+          await (video as any).msRequestFullscreen();
+        }
       }
     } catch (error) {
       console.error('Fullscreen error:', error);
