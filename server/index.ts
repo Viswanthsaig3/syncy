@@ -6,6 +6,19 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { v4 as uuidv4 } from 'uuid';
 
+// WebRTC types for P2P streaming
+interface RTCSessionDescriptionInit {
+  type: 'offer' | 'answer' | 'pranswer' | 'rollback';
+  sdp?: string;
+}
+
+interface RTCIceCandidateInit {
+  candidate?: string;
+  sdpMLineIndex?: number | null;
+  sdpMid?: string | null;
+  usernameFragment?: string | null;
+}
+
 const app = express();
 const server = createServer(app);
 
@@ -251,6 +264,198 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error handling video event:', error);
       socket.emit('error', { message: 'Failed to sync video event' });
+    }
+  });
+
+  // P2P Streaming events
+  socket.on('webrtc-offer', (data: {
+    roomId: string;
+    participantId: string;
+    offer: RTCSessionDescriptionInit;
+  }) => {
+    try {
+      const { roomId, participantId, offer } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Forward offer to target participant
+      socket.to(participantId).emit('webrtc-offer', {
+        ...data,
+        fromUserId: socket.id,
+        timestamp: Date.now()
+      });
+      
+      console.log(`WebRTC offer forwarded from ${socket.id} to ${participantId}`);
+    } catch (error) {
+      console.error('Error handling WebRTC offer:', error);
+      socket.emit('error', { message: 'Failed to process WebRTC offer' });
+    }
+  });
+
+  socket.on('webrtc-answer', (data: {
+    roomId: string;
+    participantId: string;
+    answer: RTCSessionDescriptionInit;
+  }) => {
+    try {
+      const { roomId, participantId, answer } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Forward answer to target participant
+      socket.to(participantId).emit('webrtc-answer', {
+        ...data,
+        fromUserId: socket.id,
+        timestamp: Date.now()
+      });
+      
+      console.log(`WebRTC answer forwarded from ${socket.id} to ${participantId}`);
+    } catch (error) {
+      console.error('Error handling WebRTC answer:', error);
+      socket.emit('error', { message: 'Failed to process WebRTC answer' });
+    }
+  });
+
+  socket.on('ice-candidate', (data: {
+    roomId: string;
+    participantId: string;
+    candidate: RTCIceCandidateInit;
+  }) => {
+    try {
+      const { roomId, participantId, candidate } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Forward ICE candidate to target participant
+      socket.to(participantId).emit('ice-candidate', {
+        ...data,
+        fromUserId: socket.id,
+        timestamp: Date.now()
+      });
+      
+      console.log(`ICE candidate forwarded from ${socket.id} to ${participantId}`);
+    } catch (error) {
+      console.error('Error handling ICE candidate:', error);
+      socket.emit('error', { message: 'Failed to process ICE candidate' });
+    }
+  });
+
+  socket.on('join-stream-request', (data: {
+    roomId: string;
+  }) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      const userId = userSockets.get(socket.id);
+      if (!userId) {
+        socket.emit('error', { message: 'User session not found' });
+        return;
+      }
+      
+      const user = room.users.get(userId);
+      if (!user) {
+        socket.emit('error', { message: 'User not in room' });
+        return;
+      }
+      
+      // Notify host about new participant wanting to join stream
+      socket.to(room.host).emit('join-stream-request', {
+        ...data,
+        participantId: socket.id,
+        participantName: user.name,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Join stream request from ${user.name} in room ${roomId}`);
+    } catch (error) {
+      console.error('Error handling join stream request:', error);
+      socket.emit('error', { message: 'Failed to process join stream request' });
+    }
+  });
+
+  socket.on('streaming-started', (data: {
+    roomId: string;
+    metadata: any;
+    totalChunks: number;
+    quality: string;
+  }) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      const userId = userSockets.get(socket.id);
+      if (!userId) {
+        socket.emit('error', { message: 'User session not found' });
+        return;
+      }
+      
+      const user = room.users.get(userId);
+      if (!user) {
+        socket.emit('error', { message: 'User not in room' });
+        return;
+      }
+      
+      // Notify all participants that streaming has started
+      socket.to(roomId).emit('streaming-started', {
+        ...data,
+        hostId: socket.id,
+        hostName: user.name,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Streaming started by ${user.name} in room ${roomId}`);
+    } catch (error) {
+      console.error('Error handling streaming started:', error);
+      socket.emit('error', { message: 'Failed to process streaming started' });
+    }
+  });
+
+  socket.on('streaming-stopped', (data: {
+    roomId: string;
+  }) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Notify all participants that streaming has stopped
+      socket.to(roomId).emit('streaming-stopped', {
+        ...data,
+        hostId: socket.id,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Streaming stopped in room ${roomId}`);
+    } catch (error) {
+      console.error('Error handling streaming stopped:', error);
+      socket.emit('error', { message: 'Failed to process streaming stopped' });
     }
   });
 
