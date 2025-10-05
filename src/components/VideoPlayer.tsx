@@ -150,11 +150,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
     const handleLoadedMetadata = () => {
       console.log('Video metadata loaded, duration:', video.duration);
+      const duration = video.duration || 0;
       updateVideoPlayerState({
-        duration: video.duration || 0,
+        duration: duration,
         isLoading: false,
         hasError: false,
       });
+      // Also update local state immediately
+      setLocalVideoState(prev => ({
+        ...prev,
+        duration: duration
+      }));
     };
 
     const handleTimeUpdate = () => {
