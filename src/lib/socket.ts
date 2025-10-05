@@ -121,11 +121,11 @@ class SocketManager {
     this.socket.emit('chat-message', { roomId, message });
   }
 
-  emit<K extends keyof SocketEvents>(event: K, data: Parameters<SocketEvents[K]>[0]) {
+  emit<K extends keyof SocketEvents>(event: K, ...args: Parameters<SocketEvents[K]>) {
     if (!this.socket) {
       throw new Error('Socket not connected');
     }
-    this.socket.emit(event, data);
+    this.socket.emit(event, ...args);
   }
 
   emitAny(event: string, data: any) {
