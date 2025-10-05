@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Settings, Maximize } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { socketManager } from '@/lib/socket';
-import { formatTime, debounce, throttle } from '@/lib/utils';
+import { formatTime, debounce } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
@@ -16,6 +16,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
   const [showControls, setShowControls] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [localVideoState, setLocalVideoState] = useState({
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 1,
+    playbackRate: 1,
+    isMuted: false,
+  });
   
   const {
     currentRoom,
@@ -25,115 +33,60 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     isHost,
   } = useAppStore();
 
-  const {
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    playbackRate,
-    isMuted,
-    isLoading,
-    hasError,
-  } = videoPlayerState;
-
-  // Sync video state with store
+  // Simple video state sync - only sync from store to video, not the other way around
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoUrl) return;
+
+    // Update local state from store
+    setLocalVideoState({
+      isPlaying: videoPlayerState.isPlaying,
+      currentTime: videoPlayerState.currentTime,
+      duration: videoPlayerState.duration,
+      volume: videoPlayerState.volume,
+      playbackRate: videoPlayerState.playbackRate,
+      isMuted: videoPlayerState.isMuted,
+    });
+
+    // Sync video element with store state
+    if (Math.abs(video.currentTime - videoPlayerState.currentTime) > 0.5) {
+      video.currentTime = videoPlayerState.currentTime;
+    }
+    
+    video.volume = videoPlayerState.isMuted ? 0 : videoPlayerState.volume;
+    video.playbackRate = videoPlayerState.playbackRate;
+    
+    // Handle play/pause
+    if (videoPlayerState.isPlaying && video.paused) {
+      video.play().catch(console.error);
+    } else if (!videoPlayerState.isPlaying && !video.paused) {
+      video.pause();
+    }
+  }, [videoPlayerState, videoUrl]);
+
+  // Simple event handlers - only for host
+  const handlePlayPause = useCallback(() => {
+    if (!isHost || !currentRoom) return;
+    
     const video = videoRef.current;
     if (!video) return;
 
-    console.log('Syncing video state:', { currentTime, volume, playbackRate, isMuted, isPlaying, duration });
+    const newIsPlaying = !localVideoState.isPlaying;
+    const currentTime = video.currentTime;
     
-    // Only update currentTime if it's significantly different to avoid conflicts
-    // Use a smaller threshold for better sync accuracy
-    if (Math.abs(video.currentTime - currentTime) > 0.5) {
-      console.log('Updating video currentTime from', video.currentTime, 'to', currentTime);
-      video.currentTime = currentTime;
-    }
+    // Update store
+    updateVideoPlayerState({ 
+      isPlaying: newIsPlaying,
+      currentTime: currentTime
+    });
     
-    // Only update volume and playback rate if they're different
-    if (Math.abs(video.volume - (isMuted ? 0 : volume)) > 0.01) {
-      video.volume = isMuted ? 0 : volume;
-    }
-    
-    if (Math.abs(video.playbackRate - playbackRate) > 0.01) {
-      video.playbackRate = playbackRate;
-    }
-    
-    // Control play/pause based on state - but only if the video is ready
-    if (video.readyState >= 2) { // HAVE_CURRENT_DATA
-      if (isPlaying && video.paused) {
-        console.log('Starting video playback');
-        video.play().catch(error => {
-          console.error('Failed to play video:', error);
-          updateVideoPlayerState({ isPlaying: false, hasError: true });
-        });
-      } else if (!isPlaying && !video.paused) {
-        console.log('Pausing video');
-        video.pause();
-      }
-    }
-  }, [currentTime, volume, playbackRate, isMuted, isPlaying, updateVideoPlayerState, duration]);
-
-  // Handle video events
-  const handlePlay = useCallback(() => {
-    if (!isHost || !currentRoom) {
-      console.log('Not host or no room:', { isHost, currentRoom });
-      return;
-    }
-    
-    const video = videoRef.current;
-    if (!video) {
-      console.log('No video element');
-      return;
-    }
-
-    if (!socketManager.isConnected) {
-      console.error('Socket not connected');
-      return;
-    }
-
-    updateVideoPlayerState({ isPlaying: true });
-    try {
-      socketManager.sendVideoEvent({
-        roomId: currentRoom,
-        type: 'play',
-        time: video.currentTime,
-      });
-      console.log('Sent play event:', { roomId: currentRoom, time: video.currentTime });
-    } catch (error) {
-      console.error('Failed to send play event:', error);
-    }
-  }, [isHost, currentRoom, updateVideoPlayerState]);
-
-  const handlePause = useCallback(() => {
-    if (!isHost || !currentRoom) {
-      console.log('Not host or no room for pause:', { isHost, currentRoom });
-      return;
-    }
-    
-    const video = videoRef.current;
-    if (!video) {
-      console.log('No video element for pause');
-      return;
-    }
-
-    if (!socketManager.isConnected) {
-      console.error('Socket not connected for pause');
-      return;
-    }
-
-    updateVideoPlayerState({ isPlaying: false });
-    try {
-      socketManager.sendVideoEvent({
-        roomId: currentRoom,
-        type: 'pause',
-        time: video.currentTime,
-      });
-      console.log('Sent pause event:', { roomId: currentRoom, time: video.currentTime });
-    } catch (error) {
-      console.error('Failed to send pause event:', error);
-    }
-  }, [isHost, currentRoom, updateVideoPlayerState]);
+    // Send to other users
+    socketManager.sendVideoEvent({
+      roomId: currentRoom,
+      type: newIsPlaying ? 'play' : 'pause',
+      time: currentTime,
+    });
+  }, [isHost, currentRoom, localVideoState.isPlaying, updateVideoPlayerState]);
 
   const handleSeek = useCallback(
     debounce((newTime: number) => {
@@ -142,41 +95,47 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       const video = videoRef.current;
       if (!video) return;
 
-      // Ensure the seek time is within valid bounds
-      const clampedTime = Math.max(0, Math.min(newTime, duration || 0));
+      const clampedTime = Math.max(0, Math.min(newTime, localVideoState.duration));
       
-      // Only send seek event if the time is significantly different
-      const currentStoreTime = useAppStore.getState().videoPlayerState.currentTime;
-      if (Math.abs(clampedTime - currentStoreTime) > 0.5) {
-        updateVideoPlayerState({ currentTime: clampedTime });
-        socketManager.sendVideoEvent({
-          roomId: currentRoom,
-          type: 'seek',
-          time: clampedTime,
-        });
-      }
-    }, 100), // Increased debounce time to prevent conflicts
-    [isHost, currentRoom, updateVideoPlayerState, duration]
-  );
-
-  const handleVolumeChange = useCallback(
-    throttle((newVolume: number) => {
-      if (!isHost || !currentRoom) return;
-
-      updateVideoPlayerState({ volume: newVolume, isMuted: newVolume === 0 });
+      // Update store
+      updateVideoPlayerState({ currentTime: clampedTime });
+      
+      // Send to other users
       socketManager.sendVideoEvent({
         roomId: currentRoom,
-        type: 'volume',
-        volume: newVolume,
+        type: 'seek',
+        time: clampedTime,
       });
     }, 100),
-    [isHost, currentRoom, updateVideoPlayerState]
+    [isHost, currentRoom, localVideoState.duration, updateVideoPlayerState]
   );
+
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    if (!isHost || !currentRoom) return;
+
+    const isMuted = newVolume === 0;
+    
+    // Update store
+    updateVideoPlayerState({ 
+      volume: newVolume,
+      isMuted: isMuted
+    });
+    
+    // Send to other users
+    socketManager.sendVideoEvent({
+      roomId: currentRoom,
+      type: 'volume',
+      volume: newVolume,
+    });
+  }, [isHost, currentRoom, updateVideoPlayerState]);
 
   const handleSpeedChange = useCallback((newSpeed: number) => {
     if (!isHost || !currentRoom) return;
 
+    // Update store
     updateVideoPlayerState({ playbackRate: newSpeed });
+    
+    // Send to other users
     socketManager.sendVideoEvent({
       roomId: currentRoom,
       type: 'speed',
@@ -184,7 +143,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     });
   }, [isHost, currentRoom, updateVideoPlayerState]);
 
-  // Video event listeners
+  // Simple video event listeners - only for metadata and time updates
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -199,40 +158,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     };
 
     const handleTimeUpdate = () => {
-      if (!isDragging && video.readyState >= 2) {
-        // Only update if the time difference is significant to avoid constant updates
-        const currentStoreTime = useAppStore.getState().videoPlayerState.currentTime;
-        if (Math.abs(video.currentTime - currentStoreTime) > 0.1) {
-          updateVideoPlayerState({ currentTime: video.currentTime });
-        }
+      if (!isDragging) {
+        // Only update current time, don't trigger events
+        setLocalVideoState(prev => ({
+          ...prev,
+          currentTime: video.currentTime
+        }));
       }
-    };
-
-    const handleEnded = () => {
-      console.log('Video ended');
-      updateVideoPlayerState({ 
-        isPlaying: false, 
-        currentTime: 0 
-      });
-      
-      // If host, broadcast the end event
-      if (isHost && currentRoom) {
-        socketManager.sendVideoEvent({
-          roomId: currentRoom,
-          type: 'seek',
-          time: 0,
-        });
-      }
-    };
-
-    const handlePlayEvent = () => {
-      console.log('Video play event triggered');
-      updateVideoPlayerState({ isPlaying: true });
-    };
-
-    const handlePauseEvent = () => {
-      console.log('Video pause event triggered');
-      updateVideoPlayerState({ isPlaying: false });
     };
 
     const handleError = () => {
@@ -243,10 +175,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       updateVideoPlayerState({ isLoading: true });
     };
 
+    const handleEnded = () => {
+      updateVideoPlayerState({ 
+        isPlaying: false, 
+        currentTime: 0 
+      });
+      
+      if (isHost && currentRoom) {
+        socketManager.sendVideoEvent({
+          roomId: currentRoom,
+          type: 'seek',
+          time: 0,
+        });
+      }
+    };
+
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('play', handlePlayEvent);
-    video.addEventListener('pause', handlePauseEvent);
     video.addEventListener('error', handleError);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('ended', handleEnded);
@@ -254,33 +199,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('play', handlePlayEvent);
-      video.removeEventListener('pause', handlePauseEvent);
       video.removeEventListener('error', handleError);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('ended', handleEnded);
     };
-  }, [updateVideoPlayerState, isDragging]);
+  }, [updateVideoPlayerState, isDragging, isHost, currentRoom]);
 
   // Handle progress bar interaction
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost || !videoRef.current || !duration) return;
+    if (!isHost || !videoRef.current || !localVideoState.duration) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const newTime = (clickX / rect.width) * duration;
+    const newTime = (clickX / rect.width) * localVideoState.duration;
     
-    // Ensure we don't seek beyond the video duration
-    const clampedTime = Math.max(0, Math.min(newTime, duration));
-    handleSeek(clampedTime);
-  };
-
-  const handleProgressMouseDown = () => {
-    setIsDragging(true);
-  };
-
-  const handleProgressMouseUp = () => {
-    setIsDragging(false);
+    handleSeek(newTime);
   };
 
   // Handle fullscreen
@@ -304,7 +237,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [isHovering, isPlaying]);
+  }, [isHovering, localVideoState.isPlaying]);
 
   if (!videoUrl) {
     return (
@@ -338,67 +271,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
         ref={videoRef}
         src={videoUrl}
         className="w-full h-full object-contain"
-        onPlay={(e) => {
-          console.log('Video onPlay event:', e.currentTarget.currentTime);
-          // Only handle play if we're the host and not already playing
-          if (isHost && !isPlaying) {
-            handlePlay();
-          }
-        }}
-        onPause={(e) => {
-          console.log('Video onPause event:', e.currentTarget.currentTime);
-          // Only handle pause if we're the host and currently playing
-          if (isHost && isPlaying) {
-            handlePause();
-          }
-        }}
-        onSeeked={(e) => {
-          const video = e.currentTarget;
-          console.log('Video onSeeked event:', video.currentTime);
-          // Only handle seek if we're the host
-          if (isHost) {
-            handleSeek(video.currentTime);
-          }
-        }}
-        onVolumeChange={(e) => {
-          const video = e.currentTarget;
-          console.log('Video onVolumeChange event:', video.volume);
-          // Only handle volume change if we're the host
-          if (isHost) {
-            handleVolumeChange(video.volume);
-          }
-        }}
-        onRateChange={(e) => {
-          const video = e.currentTarget;
-          console.log('Video onRateChange event:', video.playbackRate);
-          // Only handle rate change if we're the host
-          if (isHost) {
-            handleSpeedChange(video.playbackRate);
-          }
-        }}
-        onLoadStart={() => {
-          console.log('Video load start');
-        }}
-        onLoadedData={() => {
-          console.log('Video loaded data');
-        }}
-        onCanPlay={() => {
-          console.log('Video can play');
-        }}
-        onError={(e) => {
-          console.error('Video error:', e);
-        }}
+        preload="metadata"
       />
 
       {/* Loading overlay */}
-      {isLoading && (
+      {videoPlayerState.isLoading && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
         </div>
       )}
 
       {/* Error overlay */}
-      {hasError && (
+      {videoPlayerState.hasError && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="text-4xl mb-2">⚠️</div>
@@ -423,11 +307,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
           {/* Center play/pause button */}
           <div className="absolute inset-0 flex items-center justify-center">
             <button
-              onClick={isPlaying ? handlePause : handlePlay}
+              onClick={handlePlayPause}
               className="p-4 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
               disabled={!isHost}
             >
-              {isPlaying ? (
+              {localVideoState.isPlaying ? (
                 <Pause className="w-8 h-8" />
               ) : (
                 <Play className="w-8 h-8" />
@@ -441,12 +325,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
             <div
               className="w-full h-1 bg-gray-600 rounded-full cursor-pointer mb-4"
               onClick={handleProgressClick}
-              onMouseDown={handleProgressMouseDown}
-              onMouseUp={handleProgressMouseUp}
             >
               <div
                 className="h-full bg-red-500 rounded-full transition-all duration-100"
-                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                style={{ 
+                  width: `${localVideoState.duration > 0 ? (localVideoState.currentTime / localVideoState.duration) * 100 : 0}%` 
+                }}
               />
             </div>
 
@@ -455,11 +339,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
               <div className="flex items-center gap-4">
                 {/* Play/Pause */}
                 <button
-                  onClick={isPlaying ? handlePause : handlePlay}
+                  onClick={handlePlayPause}
                   className="hover:text-gray-300 transition-colors"
                   disabled={!isHost}
                 >
-                  {isPlaying ? (
+                  {localVideoState.isPlaying ? (
                     <Pause className="w-6 h-6" />
                   ) : (
                     <Play className="w-6 h-6" />
@@ -468,7 +352,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
                 {/* Time display */}
                 <span className="text-sm font-mono">
-                  {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
+                  {formatTime(localVideoState.currentTime)} / {formatTime(localVideoState.duration)}
                 </span>
               </div>
 
@@ -476,21 +360,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
                 {/* Volume */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => {
-                      const newMuted = !isMuted;
-                      updateVideoPlayerState({ isMuted: newMuted });
-                      if (isHost && currentRoom) {
-                        socketManager.sendVideoEvent({
-                          roomId: currentRoom,
-                          type: 'volume',
-                          volume: newMuted ? 0 : volume,
-                        });
-                      }
-                    }}
+                    onClick={() => handleVolumeChange(localVideoState.isMuted ? 1 : 0)}
                     className="hover:text-gray-300 transition-colors"
                     disabled={!isHost}
                   >
-                    {isMuted || volume === 0 ? (
+                    {localVideoState.isMuted || localVideoState.volume === 0 ? (
                       <VolumeX className="w-5 h-5" />
                     ) : (
                       <Volume2 className="w-5 h-5" />
@@ -502,7 +376,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
                     min="0"
                     max="1"
                     step="0.1"
-                    value={isMuted ? 0 : volume}
+                    value={localVideoState.isMuted ? 0 : localVideoState.volume}
                     onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                     className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                     disabled={!isHost}
@@ -511,7 +385,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
 
                 {/* Playback speed */}
                 <select
-                  value={playbackRate}
+                  value={localVideoState.playbackRate}
                   onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
                   className="bg-black/50 text-white text-sm rounded px-2 py-1"
                   disabled={!isHost}
@@ -539,11 +413,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ className }) => {
       {/* Debug panel */}
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute top-4 right-4 bg-black/75 text-white p-2 rounded text-xs font-mono max-w-xs">
-          <div>State: {isPlaying ? 'Playing' : 'Paused'}</div>
-          <div>Time: {currentTime.toFixed(2)}s</div>
-          <div>Duration: {duration.toFixed(2)}s</div>
-          <div>Volume: {(volume * 100).toFixed(0)}%</div>
-          <div>Speed: {playbackRate}x</div>
+          <div>State: {localVideoState.isPlaying ? 'Playing' : 'Paused'}</div>
+          <div>Time: {localVideoState.currentTime.toFixed(2)}s</div>
+          <div>Duration: {localVideoState.duration.toFixed(2)}s</div>
+          <div>Volume: {(localVideoState.volume * 100).toFixed(0)}%</div>
+          <div>Speed: {localVideoState.playbackRate}x</div>
           <div>Host: {isHost ? 'Yes' : 'No'}</div>
           <div>Room: {currentRoom || 'None'}</div>
           <div>Socket: {socketManager.isConnected ? 'Connected' : 'Disconnected'}</div>

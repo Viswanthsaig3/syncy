@@ -122,37 +122,30 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       const handleVideoEvent = (data: any) => {
         // Only process video events from other users
         if (data.userId === currentUser?.id) {
-          console.log('Ignoring video event from self:', data);
           return;
         }
 
-        console.log('Received video event from another user:', data);
+        console.log('Received video event:', data);
 
         switch (data.type) {
           case 'play':
-            console.log('Processing play event:', data);
             updateVideoPlayerState({
               isPlaying: true,
-              // Only update currentTime if it's provided and valid
-              ...(data.time !== undefined && data.time >= 0 && { currentTime: data.time }),
+              currentTime: data.time || 0,
             });
             break;
           case 'pause':
-            console.log('Processing pause event:', data);
             updateVideoPlayerState({
               isPlaying: false,
-              // Only update currentTime if it's provided and valid
-              ...(data.time !== undefined && data.time >= 0 && { currentTime: data.time }),
+              currentTime: data.time || 0,
             });
             break;
           case 'seek':
-            console.log('Processing seek event:', data);
-            if (data.time !== undefined && data.time >= 0) {
+            if (data.time !== undefined) {
               updateVideoPlayerState({ currentTime: data.time });
             }
             break;
           case 'volume':
-            console.log('Processing volume event:', data);
             if (data.volume !== undefined) {
               updateVideoPlayerState({
                 volume: data.volume,
@@ -161,13 +154,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             }
             break;
           case 'speed':
-            console.log('Processing speed event:', data);
             if (data.speed !== undefined) {
               updateVideoPlayerState({ playbackRate: data.speed });
             }
             break;
-          default:
-            console.log('Unknown video event type:', data.type);
         }
       };
 
