@@ -23,6 +23,7 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     connectionQuality,
     bandwidthStats,
     startHosting,
+    streamToParticipant,
     joinStream,
     stopStreaming,
     handleWebRTCOffer,
