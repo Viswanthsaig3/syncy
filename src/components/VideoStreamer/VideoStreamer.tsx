@@ -66,6 +66,11 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     };
 
     const handleStreamingStarted = async (data: any) => {
+      console.log('Received streaming-started event:', data);
+      console.log('Current room:', currentRoom);
+      console.log('Is host:', isHost);
+      console.log('Current user:', currentUser);
+      
       if (data.roomId === currentRoom && !isHost && currentUser) {
         // Participant should automatically join the stream when host starts
         console.log('Host started streaming, joining automatically:', data);
@@ -74,6 +79,12 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
         } catch (error) {
           console.error('Failed to join stream automatically:', error);
         }
+      } else {
+        console.log('Not joining stream - conditions not met:', {
+          roomMatch: data.roomId === currentRoom,
+          notHost: !isHost,
+          hasUser: !!currentUser
+        });
       }
     };
 
