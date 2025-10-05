@@ -51,23 +51,38 @@ export default function HomePage() {
     setIsRoomSelectorOpen,
   } = useAppStore();
 
-  // Auto-create room on first load
-  useEffect(() => {
-    if (!currentRoom && isConnected) {
-      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const userName = `User ${userCounter}`;
-      
+  // Create room handler
+  const handleCreateRoom = () => {
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const userName = `User ${userCounter}`;
+    
+    useAppStore.getState().setCurrentUser({
+      id: '',
+      name: userName,
+      isHost: true,
+      joinedAt: new Date(),
+    });
+    
+    socketManager.joinRoom(roomId, userName);
+    setUserCounter(prev => prev + 1);
+  };
+
+  // Join room handler
+  const handleJoinRoom = () => {
+    const roomId = prompt('Enter room code:')?.toUpperCase();
+    const userName = `User ${userCounter}`;
+    if (roomId) {
       useAppStore.getState().setCurrentUser({
         id: '',
         name: userName,
-        isHost: true,
+        isHost: false,
         joinedAt: new Date(),
       });
       
       socketManager.joinRoom(roomId, userName);
       setUserCounter(prev => prev + 1);
     }
-  }, [isConnected, currentRoom, userCounter]);
+  };
 
   const handleLeaveRoom = () => {
     resetRoom();
@@ -200,20 +215,7 @@ export default function HomePage() {
                 {/* Create Room */}
                 <div className="group">
                   <button
-                    onClick={() => {
-                      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-                      const userName = `User ${userCounter}`;
-                      
-                      useAppStore.getState().setCurrentUser({
-                        id: '',
-                        name: userName,
-                        isHost: true,
-                        joinedAt: new Date(),
-                      });
-                      
-                      socketManager.joinRoom(roomId, userName);
-                      setUserCounter(prev => prev + 1);
-                    }}
+                    onClick={handleCreateRoom}
                     className="w-full p-8 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors border border-slate-200"
                   >
                     <div className="flex flex-col items-center">
@@ -229,21 +231,7 @@ export default function HomePage() {
                 {/* Join Room */}
                 <div className="group">
                   <button
-                    onClick={() => {
-                      const roomId = prompt('Enter room code:')?.toUpperCase();
-                      const userName = `User ${userCounter}`;
-                      if (roomId) {
-                        useAppStore.getState().setCurrentUser({
-                          id: '',
-                          name: userName,
-                          isHost: false,
-                          joinedAt: new Date(),
-                        });
-                        
-                        socketManager.joinRoom(roomId, userName);
-                        setUserCounter(prev => prev + 1);
-                      }
-                    }}
+                    onClick={handleJoinRoom}
                     className="w-full p-8 bg-white text-slate-900 rounded-xl hover:bg-slate-50 transition-colors border border-slate-200"
                   >
                     <div className="flex flex-col items-center">
