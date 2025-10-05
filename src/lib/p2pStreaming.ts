@@ -22,6 +22,7 @@ export class P2PStreamingManager {
   private streamingInterval: NodeJS.Timeout | null = null;
   private bandwidthMonitor: NodeJS.Timeout | null = null;
   private eventHandlers: Map<string, ((data: any) => void)[]> = new Map();
+  private currentRoomId: string | null = null;
 
   constructor() {
     this.webrtcManager = new WebRTCDataChannelManager();
@@ -62,6 +63,7 @@ export class P2PStreamingManager {
     };
 
     this.setupWebRTCHandlers();
+    this.setupWebRTCEventHandlers();
   }
 
   // Host Methods
@@ -69,6 +71,7 @@ export class P2PStreamingManager {
     try {
       console.log('Starting P2P streaming host mode');
       
+      this.currentRoomId = roomId;
       this.streamingState.isHost = true;
       this.streamingState.isStreaming = true;
       
@@ -198,6 +201,7 @@ export class P2PStreamingManager {
     try {
       console.log('Joining P2P stream as participant');
       
+      this.currentRoomId = roomId;
       this.streamingState.isHost = false;
       this.streamingState.isStreaming = true;
       
@@ -336,7 +340,7 @@ export class P2PStreamingManager {
     }
   }
 
-  async handleIceCandidate(candidate: RTCIceCandidateInit, participantId: string): Promise<void> {
+  async handleIceCandidate(candidate: RTCIceCandidateInit, participantId: string, roomId?: string): Promise<void> {
     try {
       const peerConnection = this.webrtcManager['peerConnections'].get(participantId);
       if (peerConnection) {
@@ -392,6 +396,21 @@ export class P2PStreamingManager {
 
     this.webrtcManager.onMessage(StreamingMessageType.CHUNK_REQUEST, (message, participantId) => {
       console.log(`Received chunk request from ${participantId}`);
+    });
+  }
+
+  private setupWebRTCEventHandlers(): void {
+    // Handle ICE candidates from WebRTC data channel manager
+    this.webrtcManager.on('ice-candidate', async (data) => {
+      const { participantId, candidate } = data;
+      console.log(`ICE candidate from WebRTC manager for ${participantId}:`, candidate);
+      
+      // Send ICE candidate via Socket.IO
+      socketManager.emitAny('ice-candidate', {
+        roomId: this.currentRoomId || '',
+        participantId,
+        candidate
+      });
     });
   }
 

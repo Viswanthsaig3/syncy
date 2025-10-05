@@ -11,6 +11,7 @@ export class WebRTCDataChannelManager {
   private bandwidthStats: Map<string, BandwidthStats> = new Map();
   private messageHandlers: Map<StreamingMessageType, (message: StreamingMessage, participantId: string) => void> = new Map();
   private connectionStateHandlers: Map<string, (state: RTCPeerConnectionState) => void> = new Map();
+  private eventHandlers: Map<string, ((data: any) => void)[]> = new Map();
 
   constructor() {
     this.setupDefaultHandlers();
@@ -199,6 +200,8 @@ export class WebRTCDataChannelManager {
   private handleIceCandidate(participantId: string, candidate: RTCIceCandidate): void {
     // This will be handled by the P2P streaming manager
     console.log(`ICE candidate for ${participantId}:`, candidate);
+    // Emit ICE candidate event for the P2P streaming manager to handle
+    this.emit('ice-candidate', { participantId, candidate });
   }
 
   private updateBandwidthStats(participantId: string, state: RTCIceConnectionState): void {
@@ -267,5 +270,26 @@ export class WebRTCDataChannelManager {
     this.messageHandlers.set(StreamingMessageType.CHUNK_REQUEST, (message, participantId) => {
       console.log(`Received chunk request from ${participantId}:`, message.data);
     });
+  }
+
+  // Event system
+  on(event: string, handler: (data: any) => void): void {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, []);
+    }
+    this.eventHandlers.get(event)!.push(handler);
+  }
+
+  private emit(event: string, data: any): void {
+    const handlers = this.eventHandlers.get(event);
+    if (handlers) {
+      handlers.forEach(handler => {
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(`Error in event handler for ${event}:`, error);
+        }
+      });
+    }
   }
 }

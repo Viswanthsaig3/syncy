@@ -48,14 +48,19 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
 
     const handleIceCandidateEvent = (data: any) => {
       if (data.roomId === currentRoom) {
-        handleIceCandidate(data.candidate, data.participantId);
+        handleIceCandidate(data.candidate, data.participantId, data.roomId);
       }
     };
 
-    const handleJoinStreamRequest = (data: any) => {
-      if (data.roomId === currentRoom && isHost) {
+    const handleJoinStreamRequest = async (data: any) => {
+      if (data.roomId === currentRoom && isHost && currentUser) {
         // Host should initiate streaming to new participant
         console.log('New participant wants to join stream:', data);
+        try {
+          await streamToParticipant(data.participantId, currentRoom, currentUser.id);
+        } catch (error) {
+          console.error('Failed to stream to new participant:', error);
+        }
       }
     };
 
@@ -71,7 +76,7 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
       socketManager.off('ice-candidate', handleIceCandidateEvent);
       socketManager.off('join-stream-request', handleJoinStreamRequest);
     };
-  }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate]);
+  }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate, streamToParticipant]);
 
   // Handle video file selection for hosting
   const handleStartStreaming = async (videoFile: File) => {
