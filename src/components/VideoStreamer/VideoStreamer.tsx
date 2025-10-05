@@ -15,6 +15,7 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [hostStreamingReady, setHostStreamingReady] = useState<boolean>(false);
   const [isJoiningStream, setIsJoiningStream] = useState<boolean>(false);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
   
   const { currentRoom, currentUser, isHost } = useAppStore();
   
@@ -118,7 +119,13 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     };
   }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate, streamToParticipant, joinStream]);
 
-  // Handle video file selection for hosting
+  // Handle video file selection
+  const handleFileSelect = (file: File) => {
+    console.log('Host: Video file selected:', file.name);
+    setSelectedVideoFile(file);
+  };
+
+  // Handle starting streaming
   const handleStartStreaming = async (videoFile: File) => {
     if (!currentRoom || !currentUser) return;
 
@@ -243,6 +250,8 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
         isHost={isHost}
         hostStreamingReady={hostStreamingReady}
         isJoiningStream={isJoiningStream}
+        selectedVideoFile={selectedVideoFile}
+        onFileSelect={handleFileSelect}
         onStartStreaming={handleStartStreaming}
         onStopStreaming={handleStopStreaming}
         onJoinStream={handleJoinStream}
@@ -256,8 +265,10 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
           <div>User: {currentUser?.name || 'None'} ({currentUser?.id || 'None'})</div>
           <div>Role: {isHost ? 'Host' : 'Participant'}</div>
           <div>Streaming: {isStreaming ? 'Yes' : 'No'}</div>
+          <div>Video File: {selectedVideoFile ? selectedVideoFile.name : 'None'}</div>
           <div>Video URL: {videoUrl ? 'Set' : 'None'}</div>
           <div>Video Metadata: {videoMetadata ? 'Available' : 'None'}</div>
+          <div>Host Ready: {hostStreamingReady ? 'Yes' : 'No'}</div>
         </div>
       </div>
 

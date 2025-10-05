@@ -6,6 +6,8 @@ interface StreamingControlsProps {
   isHost: boolean;
   hostStreamingReady?: boolean;
   isJoiningStream?: boolean;
+  selectedVideoFile?: File | null;
+  onFileSelect?: (file: File) => void;
   onStartStreaming?: (videoFile: File) => void;
   onStopStreaming?: () => void;
   onJoinStream?: () => void;
@@ -16,6 +18,8 @@ export const StreamingControls: React.FC<StreamingControlsProps> = ({
   isHost,
   hostStreamingReady = false,
   isJoiningStream = false,
+  selectedVideoFile = null,
+  onFileSelect,
   onStartStreaming,
   onStopStreaming,
   onJoinStream,
@@ -36,8 +40,9 @@ export const StreamingControls: React.FC<StreamingControlsProps> = ({
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && onStartStreaming) {
-      onStartStreaming(file);
+    if (file && onFileSelect) {
+      console.log('Video file selected:', file.name, file.size);
+      onFileSelect(file);
     }
   };
 
@@ -138,11 +143,50 @@ export const StreamingControls: React.FC<StreamingControlsProps> = ({
             </select>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-slate-600 mb-2">
-              After selecting a video file, participants can join your stream
-            </p>
-          </div>
+          {selectedVideoFile ? (
+            <div className="text-center space-y-3">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-700 font-medium">
+                  ✅ Video selected: {selectedVideoFile.name}
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  {(selectedVideoFile.size / (1024 * 1024)).toFixed(1)} MB
+                </p>
+              </div>
+              
+              <button
+                onClick={() => selectedVideoFile && onStartStreaming?.(selectedVideoFile)}
+                disabled={isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-md transition-colors mx-auto ${
+                  isLoading 
+                    ? 'bg-blue-400 text-white cursor-not-allowed' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Starting Stream...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Start Streaming
+                  </>
+                )}
+              </button>
+              
+              <p className="text-xs text-slate-500">
+                Click to start streaming to participants
+              </p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-sm text-slate-600 mb-2">
+                Select a video file to start streaming
+              </p>
+            </div>
+          )}
         </div>
       )}
 
