@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { VideoStreamer } from '@/components/VideoStreamer/VideoStreamer';
 import { RoomSelector } from '@/components/RoomSelector';
-import { FileSelector } from '@/components/FileSelector';
 import { Chat } from '@/components/Chat';
 import { UserList } from '@/components/UserList';
 import { useAppStore } from '@/store/useAppStore';
@@ -44,9 +43,7 @@ export default function HomePage() {
     resetVideoState,
     chatMessages,
     setChatMessages,
-    isFileSelectorOpen,
     isRoomSelectorOpen,
-    setIsFileSelectorOpen,
     setIsRoomSelectorOpen,
   } = useAppStore();
 
@@ -200,10 +197,10 @@ export default function HomePage() {
                   <Play className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-slate-900 mb-4">
-                  Professional Video Synchronization
+                  Peer-to-Peer Video Streaming
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-                  Synchronize local video playback across multiple users with enterprise-grade reliability.
+                  Stream video files directly from host to participants using WebRTC technology. No uploads, no database - just pure P2P streaming.
                 </p>
               </div>
 
@@ -219,8 +216,8 @@ export default function HomePage() {
                       <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4">
                         <Plus className="w-6 h-6" />
                       </div>
-                      <h3 className="text-xl font-semibold mb-2">Create Session</h3>
-                      <p className="text-slate-300">Start a new synchronized session</p>
+                      <h3 className="text-xl font-semibold mb-2">Start Streaming</h3>
+                      <p className="text-slate-300">Host a P2P video stream</p>
                     </div>
                   </button>
                 </div>
@@ -235,8 +232,8 @@ export default function HomePage() {
                       <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
                         <Users className="w-6 h-6" />
                       </div>
-                      <h3 className="text-xl font-semibold mb-2">Join Session</h3>
-                      <p className="text-slate-600">Enter a room code to join</p>
+                      <h3 className="text-xl font-semibold mb-2">Join Stream</h3>
+                      <p className="text-slate-600">Enter a room code to receive stream</p>
                     </div>
                   </button>
                 </div>
@@ -249,8 +246,8 @@ export default function HomePage() {
                     <Check className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-slate-900 mb-2">Local Files</h4>
-                    <p className="text-slate-600">Keep your content secure with local file playback</p>
+                    <h4 className="text-lg font-semibold text-slate-900 mb-2">P2P Streaming</h4>
+                    <p className="text-slate-600">Direct host-to-participant streaming via WebRTC</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -258,8 +255,8 @@ export default function HomePage() {
                     <ArrowRight className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-slate-900 mb-2">Real-time Sync</h4>
-                    <p className="text-slate-600">Enterprise-grade WebSocket synchronization</p>
+                    <h4 className="text-lg font-semibold text-slate-900 mb-2">No Database</h4>
+                    <p className="text-slate-600">Stream directly without server storage</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -274,12 +271,12 @@ export default function HomePage() {
               </div>
 
               <div className="bg-slate-100 border border-slate-200 rounded-lg p-6 text-left mt-12">
-                <h3 className="font-semibold text-slate-900 mb-3">Session Protocol:</h3>
+                <h3 className="font-semibold text-slate-900 mb-3">P2P Streaming Protocol:</h3>
                 <ol className="text-sm text-slate-700 space-y-2">
-                  <li>1. All participants download the same video file locally</li>
+                  <li>1. Host selects a video file and starts streaming</li>
                   <li>2. Host creates a session and shares the room code</li>
-                  <li>3. Participants join the session and select the video file</li>
-                  <li>4. Host controls playback - all participants sync automatically</li>
+                  <li>3. Participants join the session and receive the stream</li>
+                  <li>4. Video is streamed directly from host to participants via WebRTC</li>
                 </ol>
               </div>
             </div>
@@ -287,28 +284,9 @@ export default function HomePage() {
         ) : (
           /* Professional Room Interface */
           <div className="grid lg:grid-cols-4 gap-8">
-            {/* Video Player - Main Content */}
+            {/* Video Streamer - Main Content */}
             <div className="lg:col-span-3">
-              <VideoPlayer className="mb-6" />
-              
-              {/* Video Controls */}
-              {!videoFile && (
-                <div className="bg-white border border-slate-200 rounded-lg p-12 text-center">
-                  <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-6">
-                    <FileVideo className="w-8 h-8 text-slate-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-4">No Video Selected</h3>
-                  <p className="text-slate-600 mb-8 max-w-md mx-auto">
-                    Select a video file to begin synchronized playback
-                  </p>
-                  <button
-                    onClick={() => setIsFileSelectorOpen(true)}
-                    className="bg-slate-900 text-white py-3 px-6 rounded-lg font-medium hover:bg-slate-800 transition-colors"
-                  >
-                    Select Video File
-                  </button>
-                </div>
-              )}
+              <VideoStreamer className="mb-6" />
             </div>
 
             {/* Professional Sidebar */}
@@ -319,19 +297,6 @@ export default function HomePage() {
               <div className="bg-white border border-slate-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-6">Session Controls</h3>
                 <div className="space-y-3">
-                  <button
-                    onClick={() => setIsFileSelectorOpen(true)}
-                    className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 rounded-lg transition-colors"
-                  >
-                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
-                      <FileVideo className="w-4 h-4 text-slate-600" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-slate-900">Change Video</span>
-                      <p className="text-xs text-slate-500">Select different file</p>
-                    </div>
-                  </button>
-                  
                   <button
                     onClick={handleCopyRoomCode}
                     className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 rounded-lg transition-colors"
@@ -357,10 +322,6 @@ export default function HomePage() {
         onClose={() => setIsRoomSelectorOpen(false)}
       />
       
-      <FileSelector
-        isOpen={isFileSelectorOpen}
-        onClose={() => setIsFileSelectorOpen(false)}
-      />
 
       {/* Chat */}
       <Chat />

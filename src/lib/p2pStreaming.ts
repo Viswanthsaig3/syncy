@@ -1,5 +1,6 @@
 import { VideoChunker } from './videoChunker';
 import { WebRTCDataChannelManager } from './webrtcDataChannels';
+import { socketManager } from './socket';
 import { 
   VideoChunk, 
   StreamingMessage, 
@@ -87,6 +88,14 @@ export class P2PStreamingManager {
         totalChunks: chunks.length,
         quality: this.streamingState.currentQuality
       });
+
+      // Notify server about streaming started
+      socketManager.emit('streaming-started', {
+        roomId,
+        metadata: this.videoChunker.getMetadata(),
+        totalChunks: chunks.length,
+        quality: this.streamingState.currentQuality
+      });
       
       // Start bandwidth monitoring
       this.startBandwidthMonitoring();
@@ -131,6 +140,13 @@ export class P2PStreamingManager {
         offer,
         roomId,
         userId
+      });
+
+      // Send offer via Socket.IO
+      socketManager.emit('webrtc-offer', {
+        roomId,
+        participantId,
+        offer
       });
 
     } catch (error) {
@@ -193,6 +209,9 @@ export class P2PStreamingManager {
       
       // Emit join request
       this.emit('join-stream-request', { roomId, userId });
+
+      // Send join request via Socket.IO
+      socketManager.emit('join-stream-request', { roomId });
       
     } catch (error) {
       console.error('Failed to join stream:', error);
@@ -292,6 +311,13 @@ export class P2PStreamingManager {
         answer,
         roomId,
         userId
+      });
+
+      // Send answer via Socket.IO
+      socketManager.emit('webrtc-answer', {
+        roomId,
+        participantId,
+        answer
       });
 
     } catch (error) {
