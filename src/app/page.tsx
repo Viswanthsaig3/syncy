@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function HomePage() {
-  const [userCounter, setUserCounter] = useState(1);
   
   const {
     isConnected,
@@ -54,7 +53,7 @@ export default function HomePage() {
   // Create room handler
   const handleCreateRoom = () => {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const userName = `User ${userCounter}`;
+    const userName = `Host-${Date.now().toString().slice(-4)}`;
     
     useAppStore.getState().setCurrentUser({
       id: '',
@@ -64,13 +63,12 @@ export default function HomePage() {
     });
     
     socketManager.joinRoom(roomId, userName);
-    setUserCounter(prev => prev + 1);
   };
 
   // Join room handler
   const handleJoinRoom = () => {
     const roomId = prompt('Enter room code:')?.toUpperCase();
-    const userName = `User ${userCounter}`;
+    const userName = `User-${Date.now().toString().slice(-4)}`;
     if (roomId) {
       useAppStore.getState().setCurrentUser({
         id: '',
@@ -80,7 +78,6 @@ export default function HomePage() {
       });
       
       socketManager.joinRoom(roomId, userName);
-      setUserCounter(prev => prev + 1);
     }
   };
 
