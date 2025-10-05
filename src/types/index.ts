@@ -97,6 +97,10 @@ export interface SocketEvents {
     participantId: string;
     timestamp: number;
   }) => void;
+  'video-stream-stopped': (data: {
+    roomId: string;
+    timestamp: number;
+  }) => void;
 
   // Server to Client
   'room-joined': (data: {
