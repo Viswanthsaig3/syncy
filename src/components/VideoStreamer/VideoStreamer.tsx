@@ -34,19 +34,19 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
   useEffect(() => {
     if (!currentRoom || !currentUser) return;
 
-    const handleWebRTCOffer = (data: any) => {
+    const handleWebRTCOfferEvent = (data: any) => {
       if (data.roomId === currentRoom) {
         handleWebRTCOffer(data.offer, data.participantId, data.roomId, data.userId);
       }
     };
 
-    const handleWebRTCAnswer = (data: any) => {
+    const handleWebRTCAnswerEvent = (data: any) => {
       if (data.roomId === currentRoom) {
         handleWebRTCAnswer(data.answer, data.participantId);
       }
     };
 
-    const handleIceCandidate = (data: any) => {
+    const handleIceCandidateEvent = (data: any) => {
       if (data.roomId === currentRoom) {
         handleIceCandidate(data.candidate, data.participantId);
       }
@@ -60,15 +60,15 @@ export const VideoStreamer: React.FC<VideoStreamerProps> = ({ className }) => {
     };
 
     // Register event listeners
-    socketManager.on('webrtc-offer', handleWebRTCOffer);
-    socketManager.on('webrtc-answer', handleWebRTCAnswer);
-    socketManager.on('ice-candidate', handleIceCandidate);
+    socketManager.on('webrtc-offer', handleWebRTCOfferEvent);
+    socketManager.on('webrtc-answer', handleWebRTCAnswerEvent);
+    socketManager.on('ice-candidate', handleIceCandidateEvent);
     socketManager.on('join-stream-request', handleJoinStreamRequest);
 
     return () => {
-      socketManager.off('webrtc-offer', handleWebRTCOffer);
-      socketManager.off('webrtc-answer', handleWebRTCAnswer);
-      socketManager.off('ice-candidate', handleIceCandidate);
+      socketManager.off('webrtc-offer', handleWebRTCOfferEvent);
+      socketManager.off('webrtc-answer', handleWebRTCAnswerEvent);
+      socketManager.off('ice-candidate', handleIceCandidateEvent);
       socketManager.off('join-stream-request', handleJoinStreamRequest);
     };
   }, [currentRoom, currentUser, isHost, handleWebRTCOffer, handleWebRTCAnswer, handleIceCandidate]);
