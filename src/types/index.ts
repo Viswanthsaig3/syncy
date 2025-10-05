@@ -74,13 +74,6 @@ export interface SocketEvents {
   'join-stream-request': (data: { roomId: string }) => void;
   'streaming-started': (data: {
     roomId: string;
-    metadata: any;
-    totalChunks: number;
-    quality: string;
-  }) => void;
-  'streaming-stopped': (data: { roomId: string }) => void;
-  'streaming-started': (data: {
-    roomId: string;
     hostId: string;
     hostName: string;
     metadata: any;
@@ -88,6 +81,7 @@ export interface SocketEvents {
     quality: string;
     timestamp: number;
   }) => void;
+  'streaming-stopped': (data: { roomId: string }) => void;
 
   // Server to Client
   'room-joined': (data: {
