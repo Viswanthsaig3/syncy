@@ -82,6 +82,21 @@ export interface SocketEvents {
     timestamp: number;
   }) => void;
   'streaming-stopped': (data: { roomId: string }) => void;
+  'video-stream-started': (data: {
+    roomId: string;
+    hostId: string;
+    hostName: string;
+    videoUrl: string;
+    videoName: string;
+    videoSize: number;
+    timestamp: number;
+  }) => void;
+  'request-video-stream': (data: {
+    roomId: string;
+    userId: string;
+    participantId: string;
+    timestamp: number;
+  }) => void;
 
   // Server to Client
   'room-joined': (data: {
